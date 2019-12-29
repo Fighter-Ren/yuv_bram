@@ -78,6 +78,7 @@ reg[3:0]               hy_cnt_o; //output y raw number 16
 reg[1:0]               byte_cnt; //4 bytes per time
 reg[2:0]			   huv_cnt_o;//output uv raw number 8
 reg[6:0]               r_addr;
+reg                    buf_num; //buf number
 
 //=======================================
 //        Logic   Declaration
@@ -218,6 +219,18 @@ end
 
 //******output logic******
 //state
+//buffer change
+always @(posedge clk or negedge rst_n)begin
+	if(!rst_n)begin
+		buf_num <= 'b0;
+	end
+	else if(out_complete)begin
+		buf_num <= ~buf_num;
+	end
+	else begin
+		buf_num <= buf_num;
+	end
+end 
 //ram flag
 assign ram_flag = (r_addr<(Y_CNT-1)||r_addr==7'd95)?1'b0:1'b1;
 //macro count
@@ -226,7 +239,7 @@ always @(posedge clk or negedge rst_n)begin
 		macro_cnt    <= 0;
 		out_complete <= 'b0;
 	end
-	else if(huv_cnt_o==3'd7&&byte_cnt==2'd3)begin //the last 4 Bytes of 1 macro block
+	else if(huv_cnt_o==3'd7&&byte_cnt==2'd2)begin //the last 4 Bytes of 1 macro block -1
 		if(macro_cnt == HMACRO_CNT)begin//the last macro block
 			macro_cnt    <= 'b0;
 			out_complete <= 1'b1;
@@ -298,9 +311,9 @@ always @(posedge clk or negedge rst_n)begin
 		r_addr <= r_addr;
 	end
 end
-assign addr_o_r   = (buf_valid&&r_ready)?(r_addr<Y_CNT?yaddr_o_r:uvaddr_o_r):'b0;
-assign yaddr_o_r  = (macro_cnt*16) + hy_cnt_o*(YALL_LENTH+1) + (byte_cnt*4);
-assign uvaddr_o_r = (macro_cnt*16) + huv_cnt_o*(YALL_LENTH+1) + (byte_cnt*4);
+assign addr_o_r   = (buf_valid&&r_ready)?(r_addr_i<Y_CNT?yaddr_o_r:uvaddr_o_r):'b0;
+assign yaddr_o_r  = buf_num*UV_RAM_SIZE + (macro_cnt*16) + hy_cnt_o*(YALL_LENTH+1) + (byte_cnt*4);
+assign uvaddr_o_r = buf_num*UV_RAM_SIZE/2 + (macro_cnt*16) + huv_cnt_o*(YALL_LENTH+1) + (byte_cnt*4);
 assign y_addr_o   = addr_o_r;
 assign uv_addr_o  = addr_o_r[UV_ADDR_WIDTH-1:0];
 //data

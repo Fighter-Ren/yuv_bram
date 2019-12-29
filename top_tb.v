@@ -62,7 +62,7 @@ always @(posedge clk or negedge rst_n)begin
 		data_en <= 'b0;
 	end
 	else if(w_ready)begin
-		if(w_addr==25'd1382340)begin
+		if(w_addr==25'd1382400)begin
 			data_in <= 'b0;
 			data_en <= 'b0;
 		end
@@ -73,7 +73,7 @@ always @(posedge clk or negedge rst_n)begin
 	end
 	else begin
 		data_in <= 'b0;
-		data_en <= 'b0;
+		data_en <= data_en;
 	end
 end
 //address
@@ -82,7 +82,7 @@ always @(posedge clk or negedge rst_n)begin
 		w_addr <= 'b0;
 	end
 	else if(w_ready)begin
-		if(w_addr == 25'd1382399)
+		if(w_addr == 25'd1382400)
 			w_addr <= w_addr;
 		else
 			w_addr <= w_addr + 1'b1;
