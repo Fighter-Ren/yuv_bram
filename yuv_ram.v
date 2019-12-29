@@ -9,7 +9,7 @@ module yuv_ram(
 	rst_n,
 	data_in,
 	w_valid,
-	r_addr,
+	r_addr_i,
 	r_ready,
 	w_ready,
 	r_valid,
@@ -39,7 +39,7 @@ input                    clk;
 input                    rst_n;
 input[DATA_WIDTH_I-1:0]  data_in; //input data
 input                    w_valid; //input data is valid
-input[6:0]               r_addr;  //address to read data from ram
+input[6:0]               r_addr_i;  //address to read data from ram
 input                    r_ready; //other module is ready to read data
 output                   w_ready; //ram is ready to write
 output                   r_valid; //output data is valid to read
@@ -62,9 +62,10 @@ reg                    yuv_flag; //0 is y, 1 is uv
 reg[P_CNT_WIDTH-1:0]   p_cnt; //pixel count of 1 raw
 reg[3:0]               h_cnt; //input raw number
 reg                    buf_valid; //1:store 1 buff complete
+reg                    w_flag; //to start write
 //read operation variables
-reg[Y_ADDR_WIDTH-1:0]  y_addr_o; //output address for y
-reg[UV_ADDR_WIDTH-1:0] uv_addr_o; //output address for uv
+wire[Y_ADDR_WIDTH-1:0]  y_addr_o; //output address for y
+wire[UV_ADDR_WIDTH-1:0] uv_addr_o; //output address for uv
 wire[Y_ADDR_WIDTH-1:0] addr_o_r; //output address register
 wire[Y_ADDR_WIDTH-1:0] yaddr_o_r; //output y address register
 wire[Y_ADDR_WIDTH-1:0] uvaddr_o_r;//output uv address register
@@ -72,16 +73,29 @@ reg[DATA_WIDTH_O-1:0]  data_y_o; //y data to output
 reg[DATA_WIDTH_O-1:0]  data_uv_o;//uv data to output
 reg                    out_complete; //output 1 buf complete 
 reg[MACRO_WIDTH-1:0]   macro_cnt; //macro block count to output 
-reg                    ram_flag; //0: y ram to output 1: uv ram to output
+wire                   ram_flag; //0: y ram to output 1: uv ram to output
 reg[3:0]               hy_cnt_o; //output y raw number 16
 reg[1:0]               byte_cnt; //4 bytes per time
 reg[2:0]			   huv_cnt_o;//output uv raw number 8
+reg[6:0]               r_addr;
 
 //=======================================
 //        Logic   Declaration
 //=======================================
 //******input logic******
 //state
+//write enable
+always @(posedge clk or negedge rst_n)begin
+	if(!rst_n)begin
+		w_flag <= 1'b0;
+	end
+	else if(w_valid)begin
+		w_flag <= 1'b1;
+	end
+	else begin
+		w_flag <= w_flag;
+	end
+end
 //buff control
 always @(posedge clk or negedge rst_n)begin
 	if(!rst_n)begin
@@ -97,6 +111,7 @@ always @(posedge clk or negedge rst_n)begin
 		buf_valid <= buf_valid;
 	end
 end
+assign w_ready = (!w_flag)||(y_addr_s!=y_addr_o);
 assign r_valid = buf_valid; //enable to be read by other module
 //raw control
 always @(posedge clk or negedge rst_n)begin
@@ -141,7 +156,7 @@ always @(posedge clk or negedge rst_n)begin
 					p_cnt <= p_cnt + 1'b1;
 				end
 			end
-			defualt:begin
+			default:begin
 				yuv_flag <= yuv_flag;
 				p_cnt    <= p_cnt;
 			end
@@ -203,6 +218,8 @@ end
 
 //******output logic******
 //state
+//ram flag
+assign ram_flag = (r_addr<(Y_CNT-1)||r_addr==7'd95)?1'b0:1'b1;
 //macro count
 always @(posedge clk or negedge rst_n)begin
 	if(!rst_n)begin
@@ -246,7 +263,7 @@ always @(posedge clk or negedge rst_n)begin
 					huv_cnt_o <= huv_cnt_o;
 				hy_cnt_o <= hy_cnt_o;
 			end
-			defualt:begin
+			default:begin
 				hy_cnt_o  <= 'b0;
 				huv_cnt_o <= 'b0; 
 			end
@@ -270,22 +287,33 @@ always @(posedge clk or negedge rst_n)begin
 	end
 end
 //change r_addr to real address in ram
+always @(posedge clk or negedge rst_n)begin
+	if(!rst_n)begin
+		r_addr <= 'b0;
+	end
+	else if(buf_valid&&r_ready)begin
+		r_addr <= r_addr_i;
+	end
+	else begin
+		r_addr <= r_addr;
+	end
+end
 assign addr_o_r   = (buf_valid&&r_ready)?(r_addr<Y_CNT?yaddr_o_r:uvaddr_o_r):'b0;
-assign yaddr_o_r  = macro_cnt<<4 + hy_cnt_o*(YALL_LENTH+1) + byte_cnt<<2;
-assign uvaddr_o_r = macro_cnt<<4 + huv_cnt_o*(YALL_LENTH+1) + byte_cnt<<2;
+assign yaddr_o_r  = (macro_cnt*16) + hy_cnt_o*(YALL_LENTH+1) + (byte_cnt*4);
+assign uvaddr_o_r = (macro_cnt*16) + huv_cnt_o*(YALL_LENTH+1) + (byte_cnt*4);
 assign y_addr_o   = addr_o_r;
 assign uv_addr_o  = addr_o_r[UV_ADDR_WIDTH-1:0];
 //data
 //output y data
 always @(posedge clk)begin
 	if(buf_valid&&r_ready&&!ram_flag)begin //output from y ram
-		data_y_o <= {y_ram[y_addr_o],y_ram[y_addr_o+1'b1],y_ram[y_addr_o_r+2'd2],y_ram[y_addr_o_r+2'd3]};
+		data_y_o = {y_ram[y_addr_o],y_ram[y_addr_o+1'b1],y_ram[y_addr_o+2'd2],y_ram[y_addr_o+2'd3]};
 	end
 end
 //output uv data
 always @(posedge clk)begin
 	if(buf_valid&&r_ready&&ram_flag)begin //output from uv ram
-		data_uv_o <= {uv_ram[uv_addr_o],uv_ram[uv_addr_o+1'b1],uv_ram[uv_addr_o+2'd2],uv_ram[uv_addr_o+2'd3]};
+		data_uv_o = {uv_ram[uv_addr_o],uv_ram[uv_addr_o+1'b1],uv_ram[uv_addr_o+2'd2],uv_ram[uv_addr_o+2'd3]};
 	end
 end
 //output data

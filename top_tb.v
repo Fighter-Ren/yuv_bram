@@ -23,8 +23,9 @@ reg[7:0]  data_in;
 reg       data_en;
 reg[6:0]  r_addr;
 wire      w_ready;
-reg     r_ready;
+reg       r_ready;
 wire      r_valid;
+wire      data_valid;
 wire[31:0] data_o;
 
 //assign r_ready = 1'b1;
@@ -61,7 +62,7 @@ always @(posedge clk or negedge rst_n)begin
 		data_en <= 'b0;
 	end
 	else if(w_ready)begin
-		if(w_addr==25'd1382399)begin
+		if(w_addr==25'd1382340)begin
 			data_in <= 'b0;
 			data_en <= 'b0;
 		end
@@ -143,7 +144,7 @@ end
 
 //data
 always @(posedge clk)begin
-    if(r_valid&&r_ready)begin
+    if(data_valid&&r_ready)begin
 		$fwrite(f_out, "%c", data_o[31:24]);
 		$fwrite(f_out, "%c", data_o[23:16]);
 		$fwrite(f_out, "%c", data_o[15:8]);
@@ -171,11 +172,12 @@ yuv_ram u_yuv_ram(
 	.clk        (clk      ),
 	.rst_n      (rst_n    ),
 	.data_in    (data_in  ), //write data yuv420
-	.data_en    (data_en  ), //write enable
-	.r_addr     (r_addr   ), //read address
+	.w_valid    (data_en  ), //write enable
+	.r_addr_i   (r_addr   ), //read address
 	.w_ready    (w_ready  ),
 	.r_ready    (r_ready  ),   //read enable
-	.data_flag  (r_valid  ),  //data is available to output
+	.r_valid    (r_valid  ),  //data is available to output
+	.data_valid (data_valid),
 	.data_o     (data_o   )
 );
 
