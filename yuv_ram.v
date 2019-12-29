@@ -329,5 +329,6 @@ always @(posedge clk or negedge rst_n)begin
 		data_valid <= 'b0;
 	end
 end
+//test mode
 
 endmodule
