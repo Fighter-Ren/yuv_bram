@@ -23,14 +23,15 @@ reg[7:0]  data_in;
 reg       data_en;
 reg[6:0]  r_addr;
 wire      w_ready;
-reg       r_ready;
+wire      r_ready;
 wire      r_valid;
 wire      data_valid;
 wire[31:0] data_o;
+reg       d_valid;
 
 //assign r_ready = 1'b1;
 
-//initial clock and reset
+//initial clk and reset
 initial begin
 	clk = 1'b0;
 	forever #10 clk = ~clk;
@@ -141,18 +142,31 @@ always @(posedge clk or negedge rst_n)begin
 	else
 		r_addr <= r_addr;
 end
-
+/*always @(posedge clk or negedge rst_n)begin
+	if(!rst_n)begin
+		d_valid <= 'b0;
+	end
+	else if(r_ready)begin
+		if(data_valid)begin
+			d_valid <= 1'b1;
+		end
+	end
+	else begin
+		d_valid <= 'b0;
+	end
+end*/
 //data
 always @(posedge clk)begin
-    if(data_valid&&r_ready)begin
-		$fwrite(f_out, "%c", data_o[31:24]);
-		$fwrite(f_out, "%c", data_o[23:16]);
-		$fwrite(f_out, "%c", data_o[15:8]);
-		$fwrite(f_out, "%c", data_o[7:0]);
+    if(data_valid)begin
+		$fwrite(f_out, "%h", data_o[31:24]);
+		$fwrite(f_out, "%h", data_o[23:16]);
+		$fwrite(f_out, "%h", data_o[15:8]);
+		$fwrite(f_out, "%h", data_o[7:0]);
+		$fwrite(f_out,"\n");
 	end
 end
 
-always@(posedge clk or negedge rst_n) begin
+/*always@(posedge clk or negedge rst_n) begin
 	if(!rst_n)begin
 		r_ready <= 1'b1;
 	end
@@ -163,8 +177,22 @@ always@(posedge clk or negedge rst_n) begin
 	else begin
 		r_ready <= r_ready;
 	end
+end*/
+always @(posedge clk)begin
+	if(macro_cnt == 12'd3600)begin
+		#100 $stop;
+	end
 end
 
+//instance of addr_test
+
+addr_test u_addr_test(
+	.clk        (clk       ),
+	.rst_n      (rst_n     ),
+	.data_valid (data_valid),
+	.w_ready    (r_ready   )
+	//.r_addr     (r_addr    )
+);
 
 //instance of yuv_ram
 

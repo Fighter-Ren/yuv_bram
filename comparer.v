@@ -7,21 +7,21 @@
 module comparer;
 
 //file name
-parameter FILE_A = "";
-parameter FILE_B = "";
+parameter FILE_A = "four_o.dat";
+parameter FILE_B = "four.dat";
 
 //clock 
 reg clk;
 reg rst_n;
 
 //ram to store file
-reg[7:0] ram_a[1<<24:0];
-reg[7:0] ram_b[1<<24:0];
+reg[31:0] ram_a[1<<24:0];
+reg[31:0] ram_b[1<<24:0];
 //ram address
 reg[24:0] addr;
 //data register
-reg[7:0] data_a;
-reg[7:0] data_b;
+reg[31:0] data_a;
+reg[31:0] data_b;
 //logic declaration
 //initial clock 
 initial begin
@@ -45,7 +45,7 @@ always @(posedge clk or negedge rst_n)begin
 	if(!rst_n)begin
 		addr <= 'b0;
 	end
-	else if(addr != 25'd1382400)begin
+	else if(addr != 25'd345600)begin
 		addr <= addr + 1'b1;
 	end
 	else begin
@@ -71,7 +71,7 @@ always@(posedge clk)begin
 end
 
 always@(posedge clk)begin
-	if(addr == 25'd1382400)begin
+	if(addr == 25'd345600)begin
 		#10 $finish;
 	end
 end
