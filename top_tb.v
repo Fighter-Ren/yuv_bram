@@ -30,7 +30,7 @@ wire[31:0] data_o;
 
 //assign r_ready = 1'b1;
 
-//initial clk and reset
+//initial clock and reset
 initial begin
 	clk = 1'b0;
 	forever #10 clk = ~clk;

@@ -233,25 +233,33 @@ always @(posedge clk or negedge rst_n)begin
 end 
 //ram flag
 assign ram_flag = (r_addr<(Y_CNT-1)||r_addr==7'd95)?1'b0:1'b1;
+//out complete
+always @(posedge clk or negedge rst_n)begin
+	if(!rst_n)begin
+		out_complete <= 'b0;
+	end
+	else if(huv_cnt_o==3'd7&&byte_cnt==2'd2&&macro_cnt == HMACRO_CNT)begin//the last macro block
+		out_complete <= 1'b1;
+	end
+	else begin
+		out_complete <= 'b0;
+	end
+end
 //macro count
 always @(posedge clk or negedge rst_n)begin
 	if(!rst_n)begin
 		macro_cnt    <= 0;
-		out_complete <= 'b0;
 	end
-	else if(huv_cnt_o==3'd7&&byte_cnt==2'd2)begin //the last 4 Bytes of 1 macro block -1
+	else if(huv_cnt_o==3'd7&&byte_cnt==2'd3)begin//the last 4 Bytes of 1 macro block 
 		if(macro_cnt == HMACRO_CNT)begin//the last macro block
-			macro_cnt    <= 'b0;
-			out_complete <= 1'b1;
-		end
+			macro_cnt <= 'b0;
+		end 
 		else begin
 			macro_cnt <= macro_cnt +1'b1;
-			out_complete <= 'b0;
 		end
 	end
 	else begin
-		macro_cnt    <= macro_cnt;
-		out_complete <= 'b0;
+		macro_cnt <= macro_cnt;
 	end
 end
 //raw control
