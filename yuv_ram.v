@@ -62,7 +62,7 @@ reg                    yuv_flag; //0 is y, 1 is uv
 reg[P_CNT_WIDTH-1:0]   p_cnt; //pixel count of 1 raw
 reg[3:0]               h_cnt; //input raw number
 reg                    buf_valid; //1:store 1 buff complete
-reg                    w_flag; //to start write
+reg[1:0]               w_cnt; //write count
 //read operation variables
 wire[Y_ADDR_WIDTH-1:0]  y_addr_o; //output address for y
 wire[UV_ADDR_WIDTH-1:0] uv_addr_o; //output address for uv
@@ -77,24 +77,28 @@ wire                   ram_flag; //0: y ram to output 1: uv ram to output
 reg[3:0]               hy_cnt_o; //output y raw number 16
 reg[1:0]               byte_cnt; //4 bytes per time
 reg[2:0]			   huv_cnt_o;//output uv raw number 8
-reg[6:0]               r_addr;
-reg                    buf_num; //buf number
-
+reg[6:0]               r_addr; //delay 1 clock for r_addr_i
+reg                    buf_num; //buffer number
+reg[1:0]               r_cnt; // read count
 //=======================================
 //        Logic   Declaration
 //=======================================
-//******input logic******
+//***************************
+//      input logic
+//***************************
 //state
 //write enable
+assign w_ready = w_cnt != r_cnt + 2'd2;
+//write count 
 always @(posedge clk or negedge rst_n)begin
 	if(!rst_n)begin
-		w_flag <= 1'b0;
+		w_cnt <= 'b0;
 	end
-	else if(w_valid)begin
-		w_flag <= 1'b1;
+	else if(h_complete&&(h_cnt==H_CNT))begin //store 1 buffer finished
+		w_cnt <= w_cnt + 1'b1;
 	end
 	else begin
-		w_flag <= w_flag;
+		w_cnt <= w_cnt;
 	end
 end
 //buff control
@@ -102,7 +106,7 @@ always @(posedge clk or negedge rst_n)begin
 	if(!rst_n)begin
 		buf_valid <= 'b0;
 	end
-	else if(h_complete&&(h_cnt==H_CNT))begin //store 1 raw data finished
+	else if(h_complete&&(h_cnt==H_CNT))begin //store 1 buffer finished
 		buf_valid <= 1'b1;
 	end
 	else if(out_complete)begin
@@ -112,7 +116,6 @@ always @(posedge clk or negedge rst_n)begin
 		buf_valid <= buf_valid;
 	end
 end
-assign w_ready = (!w_flag)||(y_addr_s!=y_addr_o);
 assign r_valid = buf_valid; //enable to be read by other module
 //raw control
 always @(posedge clk or negedge rst_n)begin
@@ -217,8 +220,22 @@ always @(posedge clk)begin
 	end
 end
 
-//******output logic******
+//***************************
+//      output logic
+//***************************
 //state
+//read count
+always @(posedge clk or negedge rst_n)begin
+	if(!rst_n)begin
+		r_cnt <= 'b0;
+	end
+	else if(out_complete)begin //output 1 buffer finished
+		r_cnt <= r_cnt + 1'b1;
+	end
+	else begin
+		r_cnt <= r_cnt;
+	end
+end
 //buffer change
 always @(posedge clk or negedge rst_n)begin
 	if(!rst_n)begin
@@ -251,7 +268,7 @@ always @(posedge clk or negedge rst_n)begin
 		macro_cnt    <= 0;
 	end
 	else if(huv_cnt_o==3'd7&&byte_cnt==2'd3)begin//the last 4 Bytes of 1 macro block 
-		if(macro_cnt == HMACRO_CNT)begin//the last macro block
+		if(macro_cnt == HMACRO_CNT)begin//the last macro block of 1 buffer
 			macro_cnt <= 'b0;
 		end 
 		else begin
