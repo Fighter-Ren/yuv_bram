@@ -1,6 +1,6 @@
 //*******************************************************
 //Filename    : yuv_bram.v
-//Author      : MaoRen
+//Author      : Mr.Ren
 //Description : RAM to store yuv and chage it to fit H264
 //Created     : 2019-12-27
 //*******************************************************

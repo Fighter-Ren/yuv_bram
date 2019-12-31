@@ -1,3 +1,9 @@
+%********************************************
+%Filename    : yuv2ram.m
+%Author      : Mr.Ren
+%Description : Change the normal yuv420 to store by yuyv.../yyyy...
+%Created     : 2019-12-23
+%********************************************
 close all;
 clear
 fid = fopen('FourPeople_1280x720_60.yuv','r');

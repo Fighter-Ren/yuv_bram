@@ -1,6 +1,6 @@
 //****************************************
 //Filename    : comparer.v
-//Author      : MaoRen
+//Author      : Mr.Ren
 //Description : compare two bin file  
 //Created     : 2019-12-30
 //****************************************

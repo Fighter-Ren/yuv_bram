@@ -1,6 +1,6 @@
 //*************************************************
 //Filename      : top_tb.v
-//Author        : MaoRen
+//Author        : Mr.Ren
 //Description   : test bench for yuv_ram
 //Created       : 2019-12-25
 //*************************************************
